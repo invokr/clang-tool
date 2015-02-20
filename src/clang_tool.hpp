@@ -31,6 +31,8 @@
 #include <clang-c/Index.h>
 
 #include "noncopyable.hpp"
+#include "util.hpp"
+
 #include "clang_translation_unit.hpp"
 #include "clang_translation_unit_cache.hpp"
 #include "clang_ressource_usage.hpp"
@@ -41,7 +43,7 @@ namespace clang {
         tool() : mIndex(clang_createIndex(0, 0)) {}
 
         ~tool() {
-            // @todo: dispose all translation units
+            mCache.clear();
             clang_disposeIndex(mIndex);
         }
 
@@ -72,12 +74,13 @@ namespace clang {
             ressource_map ret;
 
             for (auto &unit : mCache) {
-                ret.insert(std::make_pair<std::string, ressource_usage>(unit.second->name(), usage_from_unit(unit.second)));
+                ret.insert(std::make_pair<std::string, ressource_usage>(std::string(unit.first), usage_from_unit(unit.second)));
             }
 
             return ret;
         }
 
+        /** Removes a single translation unit from the index */
         void index_remove(const char* path) {
             std::lock_guard<std::mutex> l(mMutex);
 
@@ -86,9 +89,38 @@ namespace clang {
                 mCache.erase(it);
         }
 
+        /** Removes all translation units from the index */
         void index_clear() {
             std::lock_guard<std::mutex> l(mMutex);
             mCache.clear();
+        }
+
+        /** Saves current index to the filesystem */
+        void index_save(const char* path) {
+            mCache.serialize(path, index_hash().c_str());
+        }
+
+        /** Loads current index from path */
+        void index_load(const char* path) {
+            mCache.clear();
+            mCache.unserialize(path, index_hash().c_str(), mIndex);
+        }
+
+        /** Returns a unique has representing the current index */
+        std::string index_hash() {
+            // create a hash constsisting of:
+            // [1] All compiler arguments
+            // [2] Current clang version
+            std::string src = join(mArgs.begin(), mArgs.end(), '.');
+            src.append(cx2std(clang_getClangVersion()));
+
+            // calculate sha1 and return it
+            unsigned char hash_binary[21] = {'\0'};
+            std::string hash(' ', 40);
+            sha1::calc(src.c_str(), src.size(), hash_binary);
+            sha1::toHexString(hash_binary, &hash[0]);
+
+            return hash;
         }
 
         void tu_outline();
