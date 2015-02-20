@@ -26,15 +26,14 @@
 #include <string>
 #include <clang-c/Index.h>
 
+#include "clang_location.hpp"
 #include "util.hpp"
 
 namespace clang {
     /** Contains diagnostic information */
     struct diagnostic {
-        std::string file;
+        location loc;
         uint32_t severity;
-        uint32_t row;
-        uint32_t col;
         std::string text;
         std::string summary;
     };
