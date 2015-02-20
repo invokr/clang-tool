@@ -37,6 +37,7 @@
 #include "clang_translation_unit_cache.hpp"
 #include "clang_ressource_usage.hpp"
 #include "clang_diagnostic.hpp"
+#include "clang_completion_result.hpp"
 
 namespace clang {
     class tool : private noncopyable {
@@ -127,7 +128,10 @@ namespace clang {
             return hash;
         }
 
-        void tu_outline();
+        /** Generates the outline of a translation unit */
+        void tu_outline() {
+
+        }
 
         /** Returns diagnostic information about a translation unit */
         std::vector<diagnostic> tu_diagnose(const char* path) {
@@ -140,10 +144,25 @@ namespace clang {
             return {};
         }
 
-        void cursor_complete();
+        /** Invokes clang's code completion */
+        completion_list cursor_complete(const char* path, uint32_t row, uint32_t col) {
+            std::lock_guard<std::mutex> l(mMutex);
+
+            auto it = mCache.find(path);
+            if (it != mCache.end())
+                return it->second->complete_at(row, col);
+
+            return {};
+        }
+
+        /** Returns type under cursor */
         void cursor_type();
-        void cursor_declaration();
-        void cursor_definition();
+
+        /** Returns where the location under cursor is declared */
+        void cursor_declaration(uint32_t row, uint32_t col);
+
+        /** Returns where the location under the cursor is defined */
+        void cursor_definition(uint32_t row, uint32_t col);
     private:
         CXIndex mIndex;
         translation_unit_cache mCache;
