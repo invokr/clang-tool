@@ -33,6 +33,7 @@
 #include "noncopyable.hpp"
 #include "clang_translation_unit.hpp"
 #include "clang_translation_unit_cache.hpp"
+#include "clang_ressource_usage.hpp"
 
 namespace clang {
     class tool : private noncopyable {
@@ -65,8 +66,16 @@ namespace clang {
             }
         }
 
-        void index_status() {
-            // @todo: memory usage
+        /** Returns memory usage of index */
+        ressource_map index_status() {
+            std::lock_guard<std::mutex> l(mMutex);
+            ressource_map ret;
+
+            for (auto &unit : mCache) {
+                ret.insert(std::make_pair<std::string, ressource_usage>(unit.second->name(), usage_from_unit(unit.second)));
+            }
+
+            return ret;
         }
 
         void index_remove(const char* path) {
