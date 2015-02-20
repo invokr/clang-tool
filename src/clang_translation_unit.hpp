@@ -27,9 +27,9 @@
 #include <cstddef>
 #include <clang-c/Index.h>
 
-//#include "clang_string.hpp"
 #include "sha1.hpp"
 #include "noncopyable.hpp"
+#include "util.hpp"
 
 namespace clang {
     class translation_unit : private noncopyable {
@@ -50,26 +50,28 @@ namespace clang {
         }
 
     public:
+        /** Creates a new translation unit from the given pointer */
         translation_unit(CXTranslationUnit unit) : mUnit(unit), mHash{'\0'} {
 
         }
 
+        /** Cleans up */
         ~translation_unit() {
             if (mUnit)
                 clang_disposeTranslationUnit(mUnit);
         }
 
+        /** Retruns pointer to stored unit */
         CXTranslationUnit ptr() {
             return mUnit;
         }
 
+        /** Returns the name as stored by clang */
         std::string name() {
-            CXString str = clang_getTranslationUnitSpelling(mUnit);
-            std::string ret(clang_getCString(str));
-            clang_disposeString(str);
-            return ret;
+            return cx2std(clang_getTranslationUnitSpelling(mUnit));
         }
 
+        /** Reparses the current tu */
         void reparse() {
             clang_reparseTranslationUnit(mUnit, 0, nullptr, parsing_options());
         }
@@ -87,6 +89,7 @@ namespace clang {
         char mHash[20];
     };
 
+    /// Type for a shared translation unit
     typedef std::shared_ptr<translation_unit> translation_unit_shared;
 }
 
