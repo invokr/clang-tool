@@ -36,6 +36,7 @@
 #include "clang_translation_unit.hpp"
 #include "clang_translation_unit_cache.hpp"
 #include "clang_ressource_usage.hpp"
+#include "clang_diagnostic.hpp"
 
 namespace clang {
     class tool : private noncopyable {
@@ -97,11 +98,14 @@ namespace clang {
 
         /** Saves current index to the filesystem */
         void index_save(const char* path) {
+            std::lock_guard<std::mutex> l(mMutex);
             mCache.serialize(path, index_hash().c_str());
         }
 
         /** Loads current index from path */
         void index_load(const char* path) {
+            std::lock_guard<std::mutex> l(mMutex);
+
             mCache.clear();
             mCache.unserialize(path, index_hash().c_str(), mIndex);
         }
@@ -124,7 +128,17 @@ namespace clang {
         }
 
         void tu_outline();
-        void tu_diagnose();
+
+        /** Returns diagnostic information about a translation unit */
+        std::vector<diagnostic> tu_diagnose(const char* path) {
+            std::lock_guard<std::mutex> l(mMutex);
+
+            auto it = mCache.find(path);
+            if (it != mCache.end())
+                return it->second->diagnose();
+
+            return {};
+        }
 
         void cursor_complete();
         void cursor_type();

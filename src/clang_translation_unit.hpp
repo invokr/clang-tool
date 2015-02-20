@@ -31,6 +31,8 @@
 #include "noncopyable.hpp"
 #include "util.hpp"
 
+#include "clang_diagnostic.hpp"
+
 namespace clang {
     class translation_unit : private noncopyable {
     public:
@@ -77,7 +79,38 @@ namespace clang {
         }
 
         void outline();
-        void diagnose();
+
+        /** Returns diagnostic information about this translation unit */
+        std::vector<diagnostic> diagnose() {
+            // Get all the diagnostics
+            uint32_t n = clang_getNumDiagnostics(mUnit);
+            std::vector<diagnostic> ret;
+            ret.reserve(n);
+
+            for (uint32_t i = 0; i < n; ++i) {
+                CXFile file;
+                uint32_t row = 0;
+                uint32_t col = 0;
+                uint32_t offset = 0;
+
+                CXDiagnostic diag = clang_getDiagnostic(mUnit, i);
+                CXSourceLocation loc = clang_getDiagnosticLocation(diag);
+                clang_getExpansionLocation( loc, &file, &row, &col, &offset );
+
+                ret.push_back({
+                    cx2std(clang_getFileName(file)),
+                    clang_getDiagnosticSeverity(diag),
+                    row,
+                    col,
+                    diagnostic_text(diag),
+                    diagnostic_summary(diag)
+                });
+
+                clang_disposeDiagnostic(diag);
+            }
+
+            return ret;
+        }
 
         void get_cursor_at(uint64_t row, uint64_t col);
         void complete_at();
