@@ -58,6 +58,10 @@ namespace clang {
                 clang_disposeTranslationUnit(mUnit);
         }
 
+        CXTranslationUnit ptr() {
+            return mUnit;
+        }
+
         void reparse() {
             clang_reparseTranslationUnit(mUnit, 0, nullptr, parsing_options());
         }
