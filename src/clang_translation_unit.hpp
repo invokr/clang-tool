@@ -27,6 +27,7 @@
 #include <cstddef>
 #include <clang-c/Index.h>
 
+//#include "clang_string.hpp"
 #include "sha1.hpp"
 #include "noncopyable.hpp"
 
@@ -60,6 +61,13 @@ namespace clang {
 
         CXTranslationUnit ptr() {
             return mUnit;
+        }
+
+        std::string name() {
+            CXString str = clang_getTranslationUnitSpelling(mUnit);
+            std::string ret(clang_getCString(str));
+            clang_disposeString(str);
+            return ret;
         }
 
         void reparse() {
