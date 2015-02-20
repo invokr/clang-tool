@@ -24,6 +24,8 @@
 #define _RD_CLANG_RESSOURCE_USAGE_HPP_
 
 #include <vector>
+#include <string>
+#include <unordered_map>
 #include <clang-c/Index.h>
 #include <cassert>
 
@@ -39,6 +41,9 @@ static_assert(CXTUResourceUsage_First != 0, "Error ensuring usage consistency");
 namespace clang {
     /// Type for our ressource usage structure
     typedef std::vector<uint32_t> ressource_usage;
+
+    /// Type for a map of file -> ressources
+    typedef std::unordered_map<std::string, ressource_usage> ressource_map;
 
     /// Creates a filled ressource_usage structure form a translation unit
     ressource_usage usage_from_unit(translation_unit_shared u) {
