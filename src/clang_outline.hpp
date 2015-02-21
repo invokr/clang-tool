@@ -37,6 +37,7 @@ namespace clang {
     struct outline_class {
         std::string name;
         std::vector<outline_func> functions;
+        std::vector<std::string> attributes;
     };
 
     /** Represents the basic outline of a translation unit */
