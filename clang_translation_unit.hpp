@@ -137,6 +137,7 @@ namespace clang {
                    CXTranslationUnit_Incomplete |
                    CXTranslationUnit_IncludeBriefCommentsInCodeCompletion |
                    CXTranslationUnit_ForSerialization |
+                   CXTranslationUnit_CacheCompletionResults |
                    clang_defaultEditingTranslationUnitOptions();
         }
 

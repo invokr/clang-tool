@@ -84,7 +84,7 @@ namespace clang {
             std::string p(path);
 
             std::ofstream output(std::string(p+"db.idx").c_str(), std::ofstream::out);
-            output << mContainer.size(); // number of .unit files
+            output << mContainer.size() << std::endl; // number of .unit files
             output << hash << std::endl; // sha1 of argument set
 
             uint32_t idx = 0;
@@ -118,7 +118,8 @@ namespace clang {
             std::string key;
             for (size_type i = 0; i < size; ++i) {
                 input >> key;
-                mContainer[key] = std::make_shared<translation_unit>(clang_createTranslationUnit(idx, std::string(p+std::to_string(i)+".unit").c_str()), std::string(p+"db.idx").c_str());
+                
+                mContainer[key] = std::make_shared<translation_unit>(clang_createTranslationUnit(idx, std::string(p+std::to_string(i)+".unit").c_str()), key);
                 mContainer[key]->reparse();
             }
 
