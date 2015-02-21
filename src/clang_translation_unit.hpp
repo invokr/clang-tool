@@ -34,6 +34,7 @@
 
 #include "clang_completion_result.hpp"
 #include "clang_diagnostic.hpp"
+#include "clang_location.hpp"
 
 namespace clang {
     class translation_unit : private noncopyable {
@@ -80,6 +81,14 @@ namespace clang {
             clang_reparseTranslationUnit(mUnit, 0, nullptr, parsing_options());
         }
 
+        /** Reindexes the current tu, useful to for def / decl updates */
+        void reindex() {
+            clang_reparseTranslationUnit(
+                mUnit, 0, nullptr, CXTranslationUnit_PrecompiledPreamble | CXTranslationUnit_SkipFunctionBodies
+            );
+        }
+
+        /** Generates tu outline */
         void outline();
 
         /** Returns diagnostic information about this translation unit */
@@ -109,8 +118,6 @@ namespace clang {
 
             return ret;
         }
-
-        void get_cursor_at(uint64_t row, uint64_t col);
 
         /** Runs clang's code completion */
         completion_list complete_at(uint32_t row, uint32_t col) {
@@ -175,12 +182,71 @@ namespace clang {
             return ret;
         }
 
-        void type_at();
-        void declaration_location_at();
-        void definition_location_at();
+        /** Returns type at given position */
+        std::string type_at(uint32_t row, uint32_t col) {
+            CXCursor cursor = get_cursor_at(row, col);
+
+            if (clang_Cursor_isNull(cursor) || clang_isInvalid(clang_getCursorKind(cursor)))
+                return {};
+
+            CXType type = clang_getCursorType(cursor);
+            CXType real_type = clang_getCanonicalType( type );
+
+            std::string ret = cx2std(clang_getTypeSpelling(type));
+
+            if (!clang_equalTypes(type, real_type)) {
+                ret.append(" - ");
+                ret.append(cx2std(clang_getTypeSpelling(real_type)));
+            }
+
+            return ret;
+        }
+
+        /** Returns location of declaration at given position */
+        location declaration_location_at(uint32_t row, uint32_t col) {
+            CXCursor cursor = get_cursor_at(row, col);
+            CXCursor ref = clang_getCursorReferenced( cursor );
+
+            if (clang_Cursor_isNull(ref) || clang_isInvalid(clang_getCursorKind(ref)))
+                return {};
+
+            CXSourceLocation loc = clang_getCursorLocation(ref);
+
+            CXFile file;
+            uint32_t nrow, ncol, offset = 0;
+
+            clang_getExpansionLocation( loc, &file, &nrow, &ncol, &offset );
+            return { cx2std(clang_getFileName(file)), nrow, ncol };
+        }
+
+        /** Returns location of definition at given position */
+        location definition_location_at(uint32_t row, uint32_t col) {
+            CXCursor cursor = get_cursor_at(row, col);
+            CXCursor ref = clang_getCursorDefinition( cursor );
+
+            if (clang_Cursor_isNull(ref) || clang_isInvalid(clang_getCursorKind(ref)))
+                return {};
+
+            CXSourceLocation loc = clang_getCursorLocation(ref);
+
+            CXFile file;
+            uint32_t nrow, ncol, offset = 0;
+
+            clang_getExpansionLocation( loc, &file, &nrow, &ncol, &offset );
+            return { cx2std(clang_getFileName(file)), nrow, ncol };
+        }
+
     private:
         CXTranslationUnit mUnit;
         char mHash[20];
+
+        /** Returns CXCursor at given location */
+        CXCursor get_cursor_at(uint64_t row, uint64_t col) {
+            CXFile file = clang_getFile(mUnit, name().c_str());
+            CXSourceLocation loc = clang_getLocation(mUnit, file, row, col);
+
+            return clang_getCursor(mUnit, loc);
+        }
     };
 
     /// Type for a shared translation unit

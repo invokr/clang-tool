@@ -38,6 +38,10 @@
 #include "clang_ressource_usage.hpp"
 #include "clang_diagnostic.hpp"
 #include "clang_completion_result.hpp"
+<<<<<<< HEAD
+=======
+#include "clang_location.hpp"
+>>>>>>> dev
 
 namespace clang {
     class tool : private noncopyable {
@@ -156,6 +160,7 @@ namespace clang {
         }
 
         /** Returns type under cursor */
+<<<<<<< HEAD
         void cursor_type();
 
         /** Returns where the location under cursor is declared */
@@ -163,6 +168,39 @@ namespace clang {
 
         /** Returns where the location under the cursor is defined */
         void cursor_definition(uint32_t row, uint32_t col);
+=======
+        std::string cursor_type(const char* path, uint32_t row, uint32_t col) {
+            std::lock_guard<std::mutex> l(mMutex);
+
+            auto it = mCache.find(path);
+            if (it != mCache.end())
+                return it->second->type_at(row, col);
+
+            return "";
+        }
+
+        /** Returns where the location under cursor is declared */
+        location cursor_declaration(const char* path, uint32_t row, uint32_t col) {
+            std::lock_guard<std::mutex> l(mMutex);
+
+            auto it = mCache.find(path);
+            if (it != mCache.end())
+                return it->second->declaration_location_at(row, col);
+
+            return {};
+        }
+
+        /** Returns where the location under the cursor is defined */
+        location cursor_definition(const char* path, uint32_t row, uint32_t col) {
+            std::lock_guard<std::mutex> l(mMutex);
+
+            auto it = mCache.find(path);
+            if (it != mCache.end())
+                return it->second->definition_location_at(row, col);
+
+            return {};
+        }
+>>>>>>> dev
     private:
         CXIndex mIndex;
         translation_unit_cache mCache;
