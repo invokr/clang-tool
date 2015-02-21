@@ -52,6 +52,7 @@ namespace clang {
         void arguments_set(const char** args, uint32_t size) {
             std::lock_guard<std::mutex> l(mMutex);
             mArgs = std::vector<const char*>(args, args+size);
+            mCache.clear();
         }
 
         /** Saves current index to the filesystem */
