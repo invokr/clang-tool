@@ -25,6 +25,7 @@
 
 #include <memory>
 #include <cstddef>
+#include <cassert>
 #include <clang-c/Index.h>
 #include <iostream>
 
@@ -35,8 +36,99 @@
 #include "clang_completion_result.hpp"
 #include "clang_diagnostic.hpp"
 #include "clang_location.hpp"
+#include "clang_outline.hpp"
 
 namespace clang {
+    // private namespace to keep cursor Visitor from poluting the namespace
+    namespace {
+        // client data
+        struct cursor_data {
+            outline *out;
+            std::string filename;
+
+            uint32_t t_state;
+        };
+
+        // Fills outline structure
+        CXChildVisitResult cursorVisitor(CXCursor cursor, CXCursor parent, CXClientData client_data) {
+            // Our outline
+            assert(client_data);
+            cursor_data *data = reinterpret_cast<cursor_data*>(client_data);
+
+            // Get some general information about the cursor
+            CXCursorKind kind = clang_getCursorKind(cursor);
+            CXString name = clang_getCursorSpelling(cursor);
+            CXSourceLocation location = clang_getCursorLocation(cursor);
+
+            // Get the definite location to filter for files
+            CXString filename;
+            uint32_t row, col;
+            clang_getPresumedLocation(location, &filename, &row, &col);
+
+            // Check if we match this
+            if (clang::cx2std(filename).compare(data->filename) != 0)
+                return CXChildVisit_Recurse;
+
+            switch (kind) {
+                // A single #include
+                case CXCursor_InclusionDirective:
+                    data->out->includes.push_back(clang::cx2std(name));
+                    break;
+
+                // class <>, class and struct
+                case CXCursor_ClassTemplate:
+                case CXCursor_ClassDecl:
+                case CXCursor_StructDecl:
+                    data->t_state = 1;
+                    data->out->classes.push_back({clang::cx2std(name), {}});
+                    break;
+
+                // Single member function
+                case CXCursor_Constructor:
+                case CXCursor_Destructor:
+                case CXCursor_CXXMethod: {
+                    assert(data->out->classes.size() > 0);
+                    auto &class_ = data->out->classes[data->out->classes.size()-1];
+                    class_.functions.push_back({clang::cx2std(name), {}});
+                } break;
+
+                // Attribute
+                case CXCursor_FieldDecl: {
+                    assert(data->out->classes.size() > 0);
+                    auto &class_ = data->out->classes[data->out->classes.size()-1];
+                    class_.attributes.push_back({clang::cx2std(clang_getTypeSpelling(clang_getCursorType(cursor)))+" "+clang::cx2std(name)});
+                } break;
+
+                // Free function
+                case CXCursor_FunctionTemplate:
+                case CXCursor_FunctionDecl:
+                    data->t_state = 2;
+                    data->out->functions.push_back({clang::cx2std(name), {}});
+                    break;
+
+                // Function argument
+                case CXCursor_ParmDecl: {
+                    if (data->t_state == 1) {
+                        assert(data->out->classes.size() > 0);
+                        auto &class_ = data->out->classes[data->out->classes.size()-1];
+
+                        assert(class_.functions.size() > 0);
+                        auto &func_ = class_.functions[class_.functions.size() -1 ];
+                        func_.params.push_back({clang::cx2std(clang_getTypeSpelling(clang_getCursorType(cursor)))+" "+clang::cx2std(name)});
+                    } else if (data->t_state == 2) {
+                        assert(data->out->functions.size() > 0);
+                        auto &func = data->out->functions[data->out->functions.size() - 1];
+                        func.params.push_back({clang::cx2std(clang_getTypeSpelling(clang_getCursorType(cursor)))+" "+clang::cx2std(name)});
+                    }
+                } break;
+                default:
+                    break;
+            }
+
+            return CXChildVisit_Recurse;
+        }
+    }
+
     class translation_unit : private noncopyable {
     public:
         /** Returns the options to use when parsing a translation unit */
@@ -56,7 +148,7 @@ namespace clang {
 
     public:
         /** Creates a new translation unit from the given pointer */
-        translation_unit(CXTranslationUnit unit) : mUnit(unit), mHash{'\0'} {
+        translation_unit(CXTranslationUnit unit, std::string name) : mUnit(unit), mHash{'\0'}, mName(name) {
 
         }
 
@@ -72,8 +164,8 @@ namespace clang {
         }
 
         /** Returns the name as stored by clang */
-        std::string name() {
-            return cx2std(clang_getTranslationUnitSpelling(mUnit));
+        const char* name() {
+            return mName.c_str();
         }
 
         /** Reparses the current tu */
@@ -89,7 +181,18 @@ namespace clang {
         }
 
         /** Generates tu outline */
-        void outline();
+        outline outline() {
+            struct outline out;
+            cursor_data data;
+            data.out = &out;
+            data.filename = mName;
+            data.t_state = 0;
+
+            CXCursor rootCursor = clang_getTranslationUnitCursor(mUnit);
+            clang_visitChildren(rootCursor, *cursorVisitor, &data);
+
+            return out;
+        }
 
         /** Returns diagnostic information about this translation unit */
         std::vector<diagnostic> diagnose() {
@@ -122,7 +225,7 @@ namespace clang {
         /** Runs clang's code completion */
         completion_list complete_at(uint32_t row, uint32_t col) {
             completion_list ret;
-            CXCodeCompleteResults *res = clang_codeCompleteAt(mUnit, name().c_str(), row, col, NULL, 0, 0);
+            CXCodeCompleteResults *res = clang_codeCompleteAt(mUnit, mName.c_str(), row, col, NULL, 0, 0);
 
             for (uint32_t i = 0; i < res->NumResults; ++i) {
                 // skip all private members
@@ -239,10 +342,11 @@ namespace clang {
     private:
         CXTranslationUnit mUnit;
         char mHash[20];
+        std::string mName;
 
         /** Returns CXCursor at given location */
         CXCursor get_cursor_at(uint64_t row, uint64_t col) {
-            CXFile file = clang_getFile(mUnit, name().c_str());
+            CXFile file = clang_getFile(mUnit, mName.c_str());
             CXSourceLocation loc = clang_getLocation(mUnit, file, row, col);
 
             return clang_getCursor(mUnit, loc);

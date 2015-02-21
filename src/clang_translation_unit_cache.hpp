@@ -118,7 +118,7 @@ namespace clang {
             std::string key;
             for (size_type i = 0; i < size; ++i) {
                 input >> key;
-                mContainer[key] = std::make_shared<translation_unit>(clang_createTranslationUnit(idx, std::string(p+std::to_string(i)+".unit").c_str()));
+                mContainer[key] = std::make_shared<translation_unit>(clang_createTranslationUnit(idx, std::string(p+std::to_string(i)+".unit").c_str()), std::string(p+"db.idx").c_str());
                 mContainer[key]->reparse();
             }
 

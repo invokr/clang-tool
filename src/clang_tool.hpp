@@ -38,10 +38,8 @@
 #include "clang_ressource_usage.hpp"
 #include "clang_diagnostic.hpp"
 #include "clang_completion_result.hpp"
-<<<<<<< HEAD
-=======
 #include "clang_location.hpp"
->>>>>>> dev
+#include "clang_outline.hpp"
 
 namespace clang {
     class tool : private noncopyable {
@@ -68,7 +66,7 @@ namespace clang {
                 it->second->reparse();
             } else {
                 std::shared_ptr<translation_unit> unit = std::make_shared<translation_unit>(
-                    clang_parseTranslationUnit(mIndex, path, &mArgs[0], mArgs.size(), nullptr, 0, translation_unit::parsing_options())
+                    clang_parseTranslationUnit(mIndex, path, &mArgs[0], mArgs.size(), nullptr, 0, translation_unit::parsing_options()), path
                 );
                 mCache.insert(path, unit);
             }
@@ -133,8 +131,14 @@ namespace clang {
         }
 
         /** Generates the outline of a translation unit */
-        void tu_outline() {
+        outline tu_outline(const char* path) {
+            std::lock_guard<std::mutex> l(mMutex);
 
+            auto it = mCache.find(path);
+            if (it != mCache.end())
+                return it->second->outline();
+
+            return {};
         }
 
         /** Returns diagnostic information about a translation unit */
@@ -160,15 +164,6 @@ namespace clang {
         }
 
         /** Returns type under cursor */
-<<<<<<< HEAD
-        void cursor_type();
-
-        /** Returns where the location under cursor is declared */
-        void cursor_declaration(uint32_t row, uint32_t col);
-
-        /** Returns where the location under the cursor is defined */
-        void cursor_definition(uint32_t row, uint32_t col);
-=======
         std::string cursor_type(const char* path, uint32_t row, uint32_t col) {
             std::lock_guard<std::mutex> l(mMutex);
 
@@ -200,7 +195,6 @@ namespace clang {
 
             return {};
         }
->>>>>>> dev
     private:
         CXIndex mIndex;
         translation_unit_cache mCache;
