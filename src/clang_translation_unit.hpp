@@ -26,11 +26,13 @@
 #include <memory>
 #include <cstddef>
 #include <clang-c/Index.h>
+#include <iostream>
 
 #include "sha1.hpp"
 #include "noncopyable.hpp"
 #include "util.hpp"
 
+#include "clang_completion_result.hpp"
 #include "clang_diagnostic.hpp"
 
 namespace clang {
@@ -89,19 +91,15 @@ namespace clang {
 
             for (uint32_t i = 0; i < n; ++i) {
                 CXFile file;
-                uint32_t row = 0;
-                uint32_t col = 0;
-                uint32_t offset = 0;
+                uint32_t row, col, offset = 0;
 
                 CXDiagnostic diag = clang_getDiagnostic(mUnit, i);
                 CXSourceLocation loc = clang_getDiagnosticLocation(diag);
                 clang_getExpansionLocation( loc, &file, &row, &col, &offset );
 
                 ret.push_back({
-                    cx2std(clang_getFileName(file)),
+                    { cx2std(clang_getFileName(file)), row, col },
                     clang_getDiagnosticSeverity(diag),
-                    row,
-                    col,
                     diagnostic_text(diag),
                     diagnostic_summary(diag)
                 });
@@ -113,7 +111,70 @@ namespace clang {
         }
 
         void get_cursor_at(uint64_t row, uint64_t col);
-        void complete_at();
+
+        /** Runs clang's code completion */
+        completion_list complete_at(uint32_t row, uint32_t col) {
+            completion_list ret;
+            CXCodeCompleteResults *res = clang_codeCompleteAt(mUnit, name().c_str(), row, col, NULL, 0, 0);
+
+            for (uint32_t i = 0; i < res->NumResults; ++i) {
+                // skip all private members
+                if (clang_getCompletionAvailability(res->Results[i].CompletionString) == CXAvailability_NotAccessible)
+                    continue;
+
+                // number of completion chunks for the current result
+                completion_result r;
+                uint32_t nChunks = clang_getNumCompletionChunks(res->Results[i].CompletionString);
+
+                // function to handle a single chunk
+                auto handle_chunk = [&](CXCompletionChunkKind k, uint32_t num) {
+                    CXString txt = clang_getCompletionChunkText(res->Results[i].CompletionString, num);
+                    switch (k) {
+                        case CXCompletionChunk_ResultType:
+                            r.return_type = cx2std(txt);
+                            break;
+                        case CXCompletionChunk_TypedText:
+                            r.name = cx2std(txt);
+                            break;
+                        case CXCompletionChunk_Placeholder:
+                            r.args.push_back(cx2std(txt));
+                            break;
+                        case CXCompletionChunk_Optional:
+                        case CXCompletionChunk_LeftParen:
+                        case CXCompletionChunk_RightParen:
+                        case CXCompletionChunk_RightBracket:
+                        case CXCompletionChunk_LeftBracket:
+                        case CXCompletionChunk_LeftBrace:
+                        case CXCompletionChunk_RightBrace:
+                        case CXCompletionChunk_RightAngle:
+                        case CXCompletionChunk_LeftAngle:
+                        case CXCompletionChunk_Comma:
+                        case CXCompletionChunk_Colon:
+                        case CXCompletionChunk_SemiColon:
+                        case CXCompletionChunk_Equal:
+                        case CXCompletionChunk_Informative:
+                        case CXCompletionChunk_HorizontalSpace:
+                            break;
+                        default:
+                            // @todo: comment blocks + brief
+                            // std::cout << cx2std(txt) << " : " << k << std::endl;
+                            break;
+                    }
+                };
+
+                for (uint32_t k = 0; k < nChunks; ++k) {
+                    handle_chunk(clang_getCompletionChunkKind(res->Results[i].CompletionString, k), k);
+                }
+
+                // fill type and append to result set
+                r.type = cursor2completion(res->Results[i].CursorKind);
+                ret.push_back(r);
+            }
+
+            clang_disposeCodeCompleteResults(res);
+            return ret;
+        }
+
         void type_at();
         void declaration_location_at();
         void definition_location_at();
