@@ -1,5 +1,5 @@
 /**
-* @file util.hpp
+* @file clang_diagnostic.cpp
 * @author Robin Dietrich <me (at) invokr (dot) org>
 * @version 1.0
 *
@@ -20,36 +20,27 @@
 *   limitations under the License.
 */
 
-#ifndef _RD_UTIL_
-#define _RD_UTIL_
-
-#include <vector>
-#include <string>
-
-#include <clang-c/Index.h>
+#include "clang_diagnostic.hpp"
 
 namespace clang {
-    /** Combines all elements of a vector into a string, delimited by delim */
-    template <typename T>
-    std::string join(const T& begin, const T& end, const char delim) {
-        std::string res;
+    std::string diagnostic_text(CXDiagnostic diag) {
+        if (!diag)
+            return "";
 
-        for (T it = begin; it != end; ++it) {
-            res.append(*it);
+        std::string txt = cx2std(clang_formatDiagnostic(diag, clang_defaultDiagnosticDisplayOptions()));
 
-            if (it+1 != end)
-                res += delim;
+        CXDiagnosticSet children = clang_getChildDiagnostics(diag);
+        if (!children)
+            return txt;
+
+        uint32_t child_num = clang_getNumDiagnosticsInSet(children);
+        if (!child_num)
+            return txt;
+
+        for (uint32_t i = 0; i < child_num; ++i) {
+            txt.append(diagnostic_text(clang_getDiagnosticInSet( children, i )));
         }
 
-        return res;
-    }
-
-    /** Converts a CXString to a std string */
-    inline std::string cx2std(CXString str) {
-        std::string ret(clang_getCString(str));
-        clang_disposeString(str);
-        return ret;
+        return txt;
     }
 }
-
-#endif /* _RD_UTIL_ */

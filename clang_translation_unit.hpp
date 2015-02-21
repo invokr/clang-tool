@@ -33,10 +33,8 @@
 #include "noncopyable.hpp"
 #include "util.hpp"
 
-#include "clang_completion_result.hpp"
-#include "clang_diagnostic.hpp"
-#include "clang_location.hpp"
 #include "clang_outline.hpp"
+#include "clang_completion_result.hpp"
 
 namespace clang {
     // private namespace to keep cursor Visitor from poluting the namespace
@@ -80,7 +78,7 @@ namespace clang {
                 case CXCursor_ClassDecl:
                 case CXCursor_StructDecl:
                     data->t_state = 1;
-                    data->out->classes.push_back({clang::cx2std(name), {}});
+                    data->out->classes.push_back({clang::cx2std(name), {}, {}});
                     break;
 
                 // Single member function
@@ -129,6 +127,11 @@ namespace clang {
         }
     }
 
+    // forward decl
+    struct location;
+    struct diagnostic;
+
+    /** Represents a single translation unit */
     class translation_unit : private noncopyable {
     public:
         /** Returns the options to use when parsing a translation unit */
@@ -149,9 +152,7 @@ namespace clang {
 
     public:
         /** Creates a new translation unit from the given pointer */
-        translation_unit(CXTranslationUnit unit, std::string name) : mUnit(unit), mHash{'\0'}, mName(name) {
-
-        }
+        translation_unit(CXTranslationUnit unit, std::string name) : mUnit(unit), mHash{'\0'}, mName(name) {}
 
         /** Cleans up */
         ~translation_unit() {
@@ -182,164 +183,22 @@ namespace clang {
         }
 
         /** Generates tu outline */
-        outline outline() {
-            struct outline out;
-            cursor_data data;
-            data.out = &out;
-            data.filename = mName;
-            data.t_state = 0;
-
-            CXCursor rootCursor = clang_getTranslationUnitCursor(mUnit);
-            clang_visitChildren(rootCursor, *cursorVisitor, &data);
-
-            return out;
-        }
+        outline outline();
 
         /** Returns diagnostic information about this translation unit */
-        std::vector<diagnostic> diagnose() {
-            // Get all the diagnostics
-            uint32_t n = clang_getNumDiagnostics(mUnit);
-            std::vector<diagnostic> ret;
-            ret.reserve(n);
-
-            for (uint32_t i = 0; i < n; ++i) {
-                CXFile file;
-                uint32_t row, col, offset = 0;
-
-                CXDiagnostic diag = clang_getDiagnostic(mUnit, i);
-                CXSourceLocation loc = clang_getDiagnosticLocation(diag);
-                clang_getExpansionLocation( loc, &file, &row, &col, &offset );
-
-                ret.push_back({
-                    { cx2std(clang_getFileName(file)), row, col },
-                    clang_getDiagnosticSeverity(diag),
-                    diagnostic_text(diag),
-                    diagnostic_summary(diag)
-                });
-
-                clang_disposeDiagnostic(diag);
-            }
-
-            return ret;
-        }
+        std::vector<diagnostic> diagnose();
 
         /** Runs clang's code completion */
-        completion_list complete_at(uint32_t row, uint32_t col) {
-            completion_list ret;
-            CXCodeCompleteResults *res = clang_codeCompleteAt(mUnit, mName.c_str(), row, col, NULL, 0, 0);
-
-            for (uint32_t i = 0; i < res->NumResults; ++i) {
-                // skip all private members
-                if (clang_getCompletionAvailability(res->Results[i].CompletionString) == CXAvailability_NotAccessible)
-                    continue;
-
-                // number of completion chunks for the current result
-                completion_result r;
-                uint32_t nChunks = clang_getNumCompletionChunks(res->Results[i].CompletionString);
-
-                // function to handle a single chunk
-                auto handle_chunk = [&](CXCompletionChunkKind k, uint32_t num) {
-                    CXString txt = clang_getCompletionChunkText(res->Results[i].CompletionString, num);
-                    switch (k) {
-                        case CXCompletionChunk_ResultType:
-                            r.return_type = cx2std(txt);
-                            break;
-                        case CXCompletionChunk_TypedText:
-                            r.name = cx2std(txt);
-                            break;
-                        case CXCompletionChunk_Placeholder:
-                            r.args.push_back(cx2std(txt));
-                            break;
-                        case CXCompletionChunk_Optional:
-                        case CXCompletionChunk_LeftParen:
-                        case CXCompletionChunk_RightParen:
-                        case CXCompletionChunk_RightBracket:
-                        case CXCompletionChunk_LeftBracket:
-                        case CXCompletionChunk_LeftBrace:
-                        case CXCompletionChunk_RightBrace:
-                        case CXCompletionChunk_RightAngle:
-                        case CXCompletionChunk_LeftAngle:
-                        case CXCompletionChunk_Comma:
-                        case CXCompletionChunk_Colon:
-                        case CXCompletionChunk_SemiColon:
-                        case CXCompletionChunk_Equal:
-                        case CXCompletionChunk_Informative:
-                        case CXCompletionChunk_HorizontalSpace:
-                            break;
-                        default:
-                            // @todo: comment blocks + brief
-                            // std::cout << cx2std(txt) << " : " << k << std::endl;
-                            break;
-                    }
-                };
-
-                for (uint32_t k = 0; k < nChunks; ++k) {
-                    handle_chunk(clang_getCompletionChunkKind(res->Results[i].CompletionString, k), k);
-                }
-
-                // fill type and append to result set
-                r.type = cursor2completion(res->Results[i].CursorKind);
-                ret.push_back(r);
-            }
-
-            clang_disposeCodeCompleteResults(res);
-            return ret;
-        }
+        completion_list complete_at(uint32_t row, uint32_t col);
 
         /** Returns type at given position */
-        std::string type_at(uint32_t row, uint32_t col) {
-            CXCursor cursor = get_cursor_at(row, col);
-
-            if (clang_Cursor_isNull(cursor) || clang_isInvalid(clang_getCursorKind(cursor)))
-                return {};
-
-            CXType type = clang_getCursorType(cursor);
-            CXType real_type = clang_getCanonicalType( type );
-
-            std::string ret = cx2std(clang_getTypeSpelling(type));
-
-            if (!clang_equalTypes(type, real_type)) {
-                ret.append(" - ");
-                ret.append(cx2std(clang_getTypeSpelling(real_type)));
-            }
-
-            return ret;
-        }
+        std::string type_at(uint32_t row, uint32_t col);
 
         /** Returns location of declaration at given position */
-        location declaration_location_at(uint32_t row, uint32_t col) {
-            CXCursor cursor = get_cursor_at(row, col);
-            CXCursor ref = clang_getCursorReferenced( cursor );
-
-            if (clang_Cursor_isNull(ref) || clang_isInvalid(clang_getCursorKind(ref)))
-                return {};
-
-            CXSourceLocation loc = clang_getCursorLocation(ref);
-
-            CXFile file;
-            uint32_t nrow, ncol, offset = 0;
-
-            clang_getExpansionLocation( loc, &file, &nrow, &ncol, &offset );
-            return { cx2std(clang_getFileName(file)), nrow, ncol };
-        }
+        location declaration_location_at(uint32_t row, uint32_t col);
 
         /** Returns location of definition at given position */
-        location definition_location_at(uint32_t row, uint32_t col) {
-            CXCursor cursor = get_cursor_at(row, col);
-            CXCursor ref = clang_getCursorDefinition( cursor );
-
-            if (clang_Cursor_isNull(ref) || clang_isInvalid(clang_getCursorKind(ref)))
-                return {};
-
-            CXSourceLocation loc = clang_getCursorLocation(ref);
-
-            CXFile file;
-            uint32_t nrow, ncol, offset = 0;
-
-            clang_getExpansionLocation( loc, &file, &nrow, &ncol, &offset );
-            return { cx2std(clang_getFileName(file)), nrow, ncol };
-        }
-
+        location definition_location_at(uint32_t row, uint32_t col);
     private:
         CXTranslationUnit mUnit;
         char mHash[20];

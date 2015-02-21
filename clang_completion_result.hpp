@@ -49,7 +49,7 @@ namespace clang {
     };
 
     /** Converts a completion type to a string */
-    const char* completion2str(completion_type t) {
+    inline const char* completion2str(completion_type t) {
         switch (t) {
             C2SMACRO(namespace_t)
             C2SMACRO(class_t)
@@ -69,7 +69,7 @@ namespace clang {
     }
 
     /** Convert clang cursor type to internal type */
-    completion_type cursor2completion(CXCursorKind kind) {
+    inline completion_type cursor2completion(CXCursorKind kind) {
         switch ( kind ) {
             // namespace
             case CXCursor_Namespace:

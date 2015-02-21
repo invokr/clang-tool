@@ -39,29 +39,10 @@ namespace clang {
     };
 
     /** Builds the diagnostic string from a CXDiagnostic */
-    std::string diagnostic_text(CXDiagnostic diag) {
-        if (!diag)
-            return "";
-
-        std::string txt = cx2std(clang_formatDiagnostic(diag, clang_defaultDiagnosticDisplayOptions()));
-
-        CXDiagnosticSet children = clang_getChildDiagnostics(diag);
-        if (!children)
-            return txt;
-
-        uint32_t child_num = clang_getNumDiagnosticsInSet(children);
-        if (!child_num)
-            return txt;
-
-        for (uint32_t i = 0; i < child_num; ++i) {
-            txt.append(diagnostic_text(clang_getDiagnosticInSet( children, i )));
-        }
-
-        return txt;
-    }
+    std::string diagnostic_text(CXDiagnostic diag);
 
     /** Returns small diagnostic summary */
-    std::string diagnostic_summary(CXDiagnostic diag) {
+    inline std::string diagnostic_summary(CXDiagnostic diag) {
         return cx2std(clang_getDiagnosticSpelling(diag));
     }
 }

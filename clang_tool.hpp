@@ -31,15 +31,12 @@
 #include <clang-c/Index.h>
 
 #include "noncopyable.hpp"
-#include "util.hpp"
-
-#include "clang_translation_unit.hpp"
 #include "clang_translation_unit_cache.hpp"
 #include "clang_ressource_usage.hpp"
-#include "clang_diagnostic.hpp"
 #include "clang_completion_result.hpp"
 #include "clang_location.hpp"
 #include "clang_outline.hpp"
+#include "clang_diagnostic.hpp"
 
 namespace clang {
     class tool : private noncopyable {
@@ -57,48 +54,6 @@ namespace clang {
             mArgs = std::vector<const char*>(args, args+size);
         }
 
-        /** Creates or updates the translation unit at path */
-        void index_touch(const char* path) {
-            std::lock_guard<std::mutex> l(mMutex);
-
-            auto it = mCache.find(path);
-            if (it != mCache.end()) {
-                it->second->reparse();
-            } else {
-                std::shared_ptr<translation_unit> unit = std::make_shared<translation_unit>(
-                    clang_parseTranslationUnit(mIndex, path, &mArgs[0], mArgs.size(), nullptr, 0, translation_unit::parsing_options()), path
-                );
-                mCache.insert(path, unit);
-            }
-        }
-
-        /** Returns memory usage of index */
-        ressource_map index_status() {
-            std::lock_guard<std::mutex> l(mMutex);
-            ressource_map ret;
-
-            for (auto &unit : mCache) {
-                ret.insert(std::make_pair<std::string, ressource_usage>(std::string(unit.first), usage_from_unit(unit.second)));
-            }
-
-            return ret;
-        }
-
-        /** Removes a single translation unit from the index */
-        void index_remove(const char* path) {
-            std::lock_guard<std::mutex> l(mMutex);
-
-            auto it = mCache.find(path);
-            if (it != mCache.end())
-                mCache.erase(it);
-        }
-
-        /** Removes all translation units from the index */
-        void index_clear() {
-            std::lock_guard<std::mutex> l(mMutex);
-            mCache.clear();
-        }
-
         /** Saves current index to the filesystem */
         void index_save(const char* path) {
             std::lock_guard<std::mutex> l(mMutex);
@@ -108,93 +63,45 @@ namespace clang {
         /** Loads current index from path */
         void index_load(const char* path) {
             std::lock_guard<std::mutex> l(mMutex);
-
             mCache.clear();
             mCache.unserialize(path, index_hash().c_str(), mIndex);
         }
 
-        /** Returns a unique has representing the current index */
-        std::string index_hash() {
-            // create a hash constsisting of:
-            // [1] All compiler arguments
-            // [2] Current clang version
-            std::string src = join(mArgs.begin(), mArgs.end(), '.');
-            src.append(cx2std(clang_getClangVersion()));
-
-            // calculate sha1 and return it
-            unsigned char hash_binary[21] = {'\0'};
-            std::string hash(' ', 40);
-            sha1::calc(src.c_str(), src.size(), hash_binary);
-            sha1::toHexString(hash_binary, &hash[0]);
-
-            return hash;
+        /** Removes all translation units from the index */
+        void index_clear() {
+            std::lock_guard<std::mutex> l(mMutex);
+            mCache.clear();
         }
+
+        /** Creates or updates the translation unit at path */
+        void index_touch(const char* path);
+
+        /** Returns memory usage of index */
+        ressource_map index_status();
+
+        /** Removes a single translation unit from the index */
+        void index_remove(const char* path);
+
+        /** Returns a unique has representing the current index */
+        std::string index_hash();
 
         /** Generates the outline of a translation unit */
-        outline tu_outline(const char* path) {
-            std::lock_guard<std::mutex> l(mMutex);
-
-            auto it = mCache.find(path);
-            if (it != mCache.end())
-                return it->second->outline();
-
-            return {};
-        }
+        outline tu_outline(const char* path);
 
         /** Returns diagnostic information about a translation unit */
-        std::vector<diagnostic> tu_diagnose(const char* path) {
-            std::lock_guard<std::mutex> l(mMutex);
-
-            auto it = mCache.find(path);
-            if (it != mCache.end())
-                return it->second->diagnose();
-
-            return {};
-        }
+        std::vector<diagnostic> tu_diagnose(const char* path);
 
         /** Invokes clang's code completion */
-        completion_list cursor_complete(const char* path, uint32_t row, uint32_t col) {
-            std::lock_guard<std::mutex> l(mMutex);
-
-            auto it = mCache.find(path);
-            if (it != mCache.end())
-                return it->second->complete_at(row, col);
-
-            return {};
-        }
+        completion_list cursor_complete(const char* path, uint32_t row, uint32_t col);
 
         /** Returns type under cursor */
-        std::string cursor_type(const char* path, uint32_t row, uint32_t col) {
-            std::lock_guard<std::mutex> l(mMutex);
-
-            auto it = mCache.find(path);
-            if (it != mCache.end())
-                return it->second->type_at(row, col);
-
-            return "";
-        }
+        std::string cursor_type(const char* path, uint32_t row, uint32_t col);
 
         /** Returns where the location under cursor is declared */
-        location cursor_declaration(const char* path, uint32_t row, uint32_t col) {
-            std::lock_guard<std::mutex> l(mMutex);
-
-            auto it = mCache.find(path);
-            if (it != mCache.end())
-                return it->second->declaration_location_at(row, col);
-
-            return {};
-        }
+        location cursor_declaration(const char* path, uint32_t row, uint32_t col);
 
         /** Returns where the location under the cursor is defined */
-        location cursor_definition(const char* path, uint32_t row, uint32_t col) {
-            std::lock_guard<std::mutex> l(mMutex);
-
-            auto it = mCache.find(path);
-            if (it != mCache.end())
-                return it->second->definition_location_at(row, col);
-
-            return {};
-        }
+        location cursor_definition(const char* path, uint32_t row, uint32_t col);
     private:
         CXIndex mIndex;
         translation_unit_cache mCache;

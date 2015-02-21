@@ -1,5 +1,5 @@
 /**
-* @file util.hpp
+* @file clang_ressource_usage.cpp
 * @author Robin Dietrich <me (at) invokr (dot) org>
 * @version 1.0
 *
@@ -20,36 +20,28 @@
 *   limitations under the License.
 */
 
-#ifndef _RD_UTIL_
-#define _RD_UTIL_
+#include <cassert>
 
-#include <vector>
-#include <string>
-
-#include <clang-c/Index.h>
+#include "clang_translation_unit.hpp"
+#include "clang_ressource_usage.hpp"
 
 namespace clang {
-    /** Combines all elements of a vector into a string, delimited by delim */
-    template <typename T>
-    std::string join(const T& begin, const T& end, const char delim) {
-        std::string res;
+    ressource_usage usage_from_unit(translation_unit_shared u) {
+        ressource_usage ret(CXTUResourceUsage_Last+1, 0); // needs to have n+1 elements
+        auto res = clang_getCXTUResourceUsage(u->ptr());
+        uint32_t all = 0;
 
-        for (T it = begin; it != end; ++it) {
-            res.append(*it);
+        for (unsigned i = 0; i < res.numEntries; ++i ) {
+            CXTUResourceUsageEntry entry = res.entries[i];
+            assert(entry.kind < (CXTUResourceUsage_Last+1));
 
-            if (it+1 != end)
-                res += delim;
+            ret[entry.kind] = entry.amount;
+            all += entry.amount;
         }
 
-        return res;
-    }
+        clang_disposeCXTUResourceUsage(res);
 
-    /** Converts a CXString to a std string */
-    inline std::string cx2std(CXString str) {
-        std::string ret(clang_getCString(str));
-        clang_disposeString(str);
+        ret[0] = all; // CXTUResourceUsage_Combined
         return ret;
     }
 }
-
-#endif /* _RD_UTIL_ */
