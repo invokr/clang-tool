@@ -26,7 +26,6 @@
 int main() {
     // 1 - Create the tool object
     clang::tool tool;
-    tool.index_load("cache/");
 
     // 2 - Put any number of files on the index with index_touch
     //     Files will be reparsed if they have been added already
@@ -91,8 +90,4 @@ int main() {
         std::cout << " [function] " << function.name;
         std::cout << clang::join(function.params.begin(), function.params.end(), ',') << std::endl;
     }
-
-    // 6 - Last but not least, we save the index so that we may
-    //     access it later. This saves the time to re-parse it.
-    tool.index_save("cache/");
 }
