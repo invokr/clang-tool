@@ -157,14 +157,14 @@ namespace clang {
         }
 
         /** Returns type under cursor */
-        location cursor_type(const char* path, uint32_t row, uint32_t col) {
+        std::string cursor_type(const char* path, uint32_t row, uint32_t col) {
             std::lock_guard<std::mutex> l(mMutex);
 
             auto it = mCache.find(path);
             if (it != mCache.end())
                 return it->second->type_at(row, col);
 
-            return {};
+            return "";
         }
 
         /** Returns where the location under cursor is declared */

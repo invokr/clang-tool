@@ -183,8 +183,23 @@ namespace clang {
         }
 
         /** Returns type at given position */
-        location type_at(uint32_t row, uint32_t col) {
-            return {};
+        std::string type_at(uint32_t row, uint32_t col) {
+            CXCursor cursor = get_cursor_at(row, col);
+
+            if (clang_Cursor_isNull(cursor) || clang_isInvalid(clang_getCursorKind(cursor)))
+                return {};
+
+            CXType type = clang_getCursorType(cursor);
+            CXType real_type = clang_getCanonicalType( type );
+
+            std::string ret = cx2std(clang_getTypeSpelling(type));
+
+            if (!clang_equalTypes(type, real_type)) {
+                ret.append(" - ");
+                ret.append(cx2std(clang_getTypeSpelling(real_type)));
+            }
+
+            return ret;
         }
 
         /** Returns location of declaration at given position */
@@ -227,8 +242,8 @@ namespace clang {
         /** Returns CXCursor at given location */
         CXCursor get_cursor_at(uint64_t row, uint64_t col) {
             CXFile file = clang_getFile(mUnit, name().c_str());
-
             CXSourceLocation loc = clang_getLocation(mUnit, file, row, col);
+
             return clang_getCursor(mUnit, loc);
         }
     };
