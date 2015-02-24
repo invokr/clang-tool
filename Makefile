@@ -8,7 +8,8 @@ SRC_PATH = .
 # Space-separated pkg-config libraries used by this project
 LIBS =
 # General compiler flags
-COMPILE_FLAGS = -std=c++0x -Wall -Wextra -g -I/usr/local/llvm35/include
+COMPILE_FLAGS = -std=c++0x -Wall -Wextra -g -Wno-unused-parameter -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-function
+COMPILE_FLAGS += -I/usr/local/llvm35/include -I/usr/include -I/usr/local/include
 # Additional release-specific flags
 RCOMPILE_FLAGS = -D NDEBUG
 # Additional debug-specific flags
@@ -16,7 +17,7 @@ DCOMPILE_FLAGS = -D DEBUG
 # Add additional include paths
 INCLUDES = -I $(SRC_PATH)/
 # General linker settings
-LINK_FLAGS = -L/usr/local/llvm35/lib -lclang
+LINK_FLAGS = -L/usr/local/llvm35/lib -L/usr/local/lib -L/usr/lib -lclang -lboost_filesystem
 # Additional release-specific linker settings
 RLINK_FLAGS =
 # Additional debug-specific linker settings
