@@ -92,9 +92,11 @@ namespace clang {
 
                 // Attribute
                 case CXCursor_FieldDecl: {
-                    assert(data->out->classes.size() > 0);
-                    auto &class_ = data->out->classes[data->out->classes.size()-1];
-                    class_.attributes.push_back({clang::cx2std(clang_getTypeSpelling(clang_getCursorType(cursor)))+" "+clang::cx2std(name)});
+                    // ignores union
+                    if (data->out->classes.size() > 0) {
+                        auto &class_ = data->out->classes[data->out->classes.size()-1];
+                        class_.attributes.push_back({clang::cx2std(clang_getTypeSpelling(clang_getCursorType(cursor)))+" "+clang::cx2std(name)});
+                    }
                 } break;
 
                 // Free function
