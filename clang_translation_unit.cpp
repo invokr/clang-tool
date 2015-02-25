@@ -24,16 +24,19 @@
 #include "clang_location.hpp"
 #include "clang_translation_unit.hpp"
 
+#include "clang_visitor_outline.hpp"
+
 namespace clang {
     outline translation_unit::outline() {
+        // Preparse the data structure
         struct outline out;
-        cursor_data data;
+        visitor_outline_data data;
         data.out = &out;
         data.filename = mName;
         data.t_state = 0;
 
         CXCursor rootCursor = clang_getTranslationUnitCursor(mUnit);
-        clang_visitChildren(rootCursor, *cursorVisitor, &data);
+        clang_visitChildren(rootCursor, *visitor_outline_fcn, &data);
 
         return out;
     }
