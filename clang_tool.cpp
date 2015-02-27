@@ -20,6 +20,8 @@
 *   limitations under the License.
 */
 
+#include <cstring>
+
 #include "util.hpp"
 #include "clang_tool.hpp"
 
@@ -35,6 +37,15 @@ namespace clang {
                 clang_parseTranslationUnit(mIndex, path, &mArgs[0], mArgs.size(), nullptr, 0, translation_unit::parsing_options()), path
             );
             mCache.insert(path, unit);
+        }
+    }
+
+    void tool::index_touch_unsaved(const char* path, const char* value, uint32_t length) {
+        std::lock_guard<std::mutex> l(mMutex);
+
+        auto it = mCache.find(path);
+        if (it != mCache.end()) {
+            it->second->set_unsaved(value, length);
         }
     }
 

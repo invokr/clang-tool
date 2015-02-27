@@ -70,7 +70,13 @@ namespace clang {
 
     completion_list translation_unit::complete_at(uint32_t row, uint32_t col) {
         completion_list ret;
-        CXCodeCompleteResults *res = clang_codeCompleteAt(mUnit, mName.c_str(), row, col, NULL, 0, 0);
+        CXCodeCompleteResults *res;
+
+        if (mCxUnsaved) {
+            res = clang_codeCompleteAt(mUnit, mName.c_str(), row, col, mCxUnsaved, 1, 0);
+        }
+        else
+            res = clang_codeCompleteAt(mUnit, mName.c_str(), row, col, nullptr, 0, 0);
 
         for (uint32_t i = 0; i < res->NumResults; ++i) {
             // skip all private members

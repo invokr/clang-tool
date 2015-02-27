@@ -77,6 +77,9 @@ namespace clang {
         /** Creates or updates the translation unit at path */
         void index_touch(const char* path);
 
+        /** Adds unsaved content for a translation unit */
+        void index_touch_unsaved(const char* path, const char* value, uint32_t length);
+
         /** Returns memory usage of index */
         ressource_map index_status();
 

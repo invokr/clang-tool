@@ -62,12 +62,15 @@ namespace clang {
 
     public:
         /** Creates a new translation unit from the given pointer */
-        translation_unit(CXTranslationUnit unit, std::string name) : mUnit(unit), mHash{'\0'}, mName(name) {}
+        translation_unit(CXTranslationUnit unit, std::string name) : mUnit(unit), mHash{'\0'}, mName(name), mCxUnsaved(nullptr) {}
 
         /** Cleans up */
         ~translation_unit() {
             if (mUnit)
                 clang_disposeTranslationUnit(mUnit);
+
+            if (mCxUnsaved)
+                delete mCxUnsaved;
         }
 
         /** Retruns pointer to stored unit */
@@ -83,6 +86,9 @@ namespace clang {
         /** Reparses the current tu */
         void reparse() {
             clang_reparseTranslationUnit(mUnit, 0, nullptr, parsing_options());
+
+            if (mCxUnsaved)
+                delete mCxUnsaved;
         }
 
         /** Reindexes the current tu, useful to for def / decl updates */
@@ -90,6 +96,19 @@ namespace clang {
             clang_reparseTranslationUnit(
                 mUnit, 0, nullptr, CXTranslationUnit_PrecompiledPreamble | CXTranslationUnit_SkipFunctionBodies
             );
+        }
+
+        /** Sets unsaved content of current tu */
+        void set_unsaved(const char* content, uint32_t length) {
+            mUnsaved = std::string(content, length);
+
+            if (mCxUnsaved)
+                delete mCxUnsaved;
+
+            mCxUnsaved = new CXUnsavedFile();
+            mCxUnsaved->Length = length;
+            mCxUnsaved->Filename = mName.c_str();
+            mCxUnsaved->Contents = mUnsaved.c_str();
         }
 
         /** Generates tu outline */
@@ -113,6 +132,8 @@ namespace clang {
         CXTranslationUnit mUnit;
         char mHash[20];
         std::string mName;
+        std::string mUnsaved;
+        CXUnsavedFile* mCxUnsaved;
 
         /** Returns CXCursor at given location */
         CXCursor get_cursor_at(uint64_t row, uint64_t col) {
