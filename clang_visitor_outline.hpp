@@ -74,9 +74,14 @@ namespace clang {
             case CXCursor_Constructor:
             case CXCursor_Destructor:
             case CXCursor_CXXMethod: {
-                assert(data->out->classes.size() > 0);
-                auto &class_ = data->out->classes[data->out->classes.size()-1];
-                class_.functions.push_back({clang::cx2std(name), {}});
+                // >0 when we are parsing a header file, probably 0 on source files
+                if (data->out->classes.size() > 0) {
+                    auto &class_ = data->out->classes[data->out->classes.size()-1];
+                    class_.functions.push_back({clang::cx2std(name), {}});
+                } else {
+                    data->t_state = 2;
+                    data->out->functions.push_back({clang::cx2std(name), {}}); // fall back to function-style outline when using source files
+                }
             } break;
 
             // Attribute
@@ -84,7 +89,9 @@ namespace clang {
                 // ignores union
                 if (data->out->classes.size() > 0) {
                     auto &class_ = data->out->classes[data->out->classes.size()-1];
-                    class_.attributes.push_back({clang::cx2std(clang_getTypeSpelling(clang_getCursorType(cursor)))+" "+clang::cx2std(name)});
+                    // don't report the type, looks to messy in IDE's
+                    //class_.attributes.push_back({clang::cx2std(clang_getTypeSpelling(clang_getCursorType(cursor)))+" "+clang::cx2std(name)});
+                    class_.attributes.push_back({clang::cx2std(name)});
                 }
             } break;
 
