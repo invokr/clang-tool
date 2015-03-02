@@ -85,10 +85,12 @@ namespace clang {
 
         /** Reparses the current tu */
         void reparse() {
-            clang_reparseTranslationUnit(mUnit, 0, nullptr, parsing_options());
-
-            if (mCxUnsaved)
+            if (mCxUnsaved) {
                 delete mCxUnsaved;
+                mCxUnsaved = nullptr;
+            }
+
+            clang_reparseTranslationUnit(mUnit, 0, nullptr, parsing_options());
         }
 
         /** Reindexes the current tu, useful to for def / decl updates */
@@ -109,6 +111,8 @@ namespace clang {
             mCxUnsaved->Length = length;
             mCxUnsaved->Filename = mName.c_str();
             mCxUnsaved->Contents = mUnsaved.c_str();
+
+            clang_reparseTranslationUnit(mUnit, 1, mCxUnsaved, parsing_options());
         }
 
         /** Generates tu outline */
