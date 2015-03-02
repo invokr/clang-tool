@@ -51,7 +51,23 @@ namespace clang {
         /** Sets compiler arguments */
         void arguments_set(const char** args, uint32_t size) {
             std::lock_guard<std::mutex> l(mMutex);
-            mArgs = std::vector<const char*>(args, args+size);
+
+            // delete old memory
+            for (const char* c : mArgs) {
+                delete[] c;
+            }
+
+            // clear vector and reserve
+            mArgs.clear();
+            mArgs.reserve(size);
+
+            // copy clear cache
+            for (uint32_t i = 0; i < size; ++i) {
+                char* c = new char[strlen(args[i])+1];
+                strcpy(c, args[i]);
+                mArgs.push_back(c);
+            }
+
             mCache.clear();
         }
 
