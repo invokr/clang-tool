@@ -44,12 +44,16 @@ namespace clang {
     std::vector<diagnostic> translation_unit::diagnose() {
         // Get all the diagnostics
         uint32_t n = clang_getNumDiagnostics(mUnit);
+
+        if (n == 0)
+            return {};
+
         std::vector<diagnostic> ret;
         ret.reserve(n);
 
         for (uint32_t i = 0; i < n; ++i) {
             CXFile file;
-            uint32_t row, col, offset = 0;
+            uint32_t row = 0, col = 0, offset = 0;
 
             CXDiagnostic diag = clang_getDiagnostic(mUnit, i);
             CXSourceLocation loc = clang_getDiagnosticLocation(diag);
