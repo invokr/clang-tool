@@ -46,7 +46,10 @@ namespace clang {
 
     /** Converts a CXString to a std string */
     inline std::string cx2std(CXString str) {
-        std::string ret(clang_getCString(str));
+        if (!str.data) 
+	    return "";
+
+	std::string ret(clang_getCString(str));
         clang_disposeString(str);
         return ret;
     }
