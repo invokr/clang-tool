@@ -49,7 +49,7 @@ namespace clang {
         if (!str.data) 
 	    return "";
 
-	std::string ret(clang_getCString(str));
+	    std::string ret(clang_getCString(str));
         clang_disposeString(str);
         return ret;
     }
