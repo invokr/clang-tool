@@ -23,6 +23,9 @@
 #ifndef _RD_CLANG_LOCATION_
 #define _RD_CLANG_LOCATION_
 
+#include <string>
+#include <cstddef>
+
 namespace clang {
     /** Location */
     struct location {
