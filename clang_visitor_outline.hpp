@@ -23,6 +23,10 @@
 #ifndef _RD_CLANG_VISITOR_OUTLINE_HPP_
 #define _RD_CLANG_VISITOR_OUTLINE_HPP_
 
+#include <clang-c/Index.h>
+#include <cassert>
+
+#include "util.hpp"
 #include "clang_outline.hpp"
 
 namespace clang {
