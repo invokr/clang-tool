@@ -34,6 +34,7 @@
 #include "util.hpp"
 
 #include "clang_outline.hpp"
+#include "clang_ast.hpp"
 #include "clang_completion_result.hpp"
 
 namespace clang {
@@ -117,6 +118,9 @@ namespace clang {
 
         /** Generates tu outline */
         outline outline();
+        
+        /** Returns ast of this unit */
+        ast_element ast();
 
         /** Returns diagnostic information about this translation unit */
         std::vector<diagnostic> diagnose();
