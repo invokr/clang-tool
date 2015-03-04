@@ -45,6 +45,7 @@ namespace clang {
         typedef_t,
         variable_t,
         macro_t,
+        include_t,
         unkown_t
     };
 
@@ -64,6 +65,7 @@ namespace clang {
             C2SMACRO(typedef_t)
             C2SMACRO(variable_t)
             C2SMACRO(macro_t)
+            C2SMACRO(include_t)
             C2SMACRO(unkown_t)
         }
     }
@@ -117,6 +119,9 @@ namespace clang {
             // macro
             case CXCursor_MacroDefinition:
                 return completion_type::macro_t;
+            // include
+            case CXCursor_InclusionDirective:
+                return completion_type::include_t;
             // unkown
             default:
                 return completion_type::unkown_t;
@@ -129,6 +134,8 @@ namespace clang {
         std::string name;
         std::vector<std::string> args;
         std::string return_type;
+        std::string brief;
+        unsigned priority;
     };
 
     /// Type for a list of completion results
