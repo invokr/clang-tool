@@ -37,6 +37,7 @@
 #include "clang_location.hpp"
 #include "clang_outline.hpp"
 #include "clang_diagnostic.hpp"
+#include "clang_ast.hpp"
 
 namespace clang {
     class tool : private noncopyable {
@@ -107,6 +108,9 @@ namespace clang {
 
         /** Generates the outline of a translation unit */
         outline tu_outline(const char* path);
+
+        /** Generates ast of given translation unit */
+        ast_element tu_ast(const char* path);
 
         /** Returns diagnostic information about a translation unit */
         std::vector<diagnostic> tu_diagnose(const char* path);

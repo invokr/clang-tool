@@ -25,10 +25,11 @@
 #include "clang_translation_unit.hpp"
 
 #include "clang_visitor_outline.hpp"
+#include "clang_ast_visitor.hpp"
 
 namespace clang {
     outline translation_unit::outline() {
-        // Preparse the data structure
+        // Prepare structure
         struct outline out;
         visitor_outline_data data;
         data.out = &out;
@@ -39,6 +40,18 @@ namespace clang {
         clang_visitChildren(rootCursor, *visitor_outline_fcn, &data);
 
         return out;
+    }
+
+    ast_element translation_unit::ast() {
+        // Prepare structure
+        ast_element e;
+        e.top_name = mName;
+        e.top = &e;
+
+        CXCursor rootCursor = clang_getTranslationUnitCursor(mUnit);
+        clang_visitChildren(rootCursor, *visitor_ast, &e);
+
+        return e;
     }
 
     std::vector<diagnostic> translation_unit::diagnose() {
@@ -121,8 +134,6 @@ namespace clang {
                     case CXCompletionChunk_HorizontalSpace:
                         break;
                     default:
-                        // @todo: comment blocks + brief
-                        // std::cout << cx2std(txt) << " : " << k << std::endl;
                         break;
                 }
             };
@@ -131,8 +142,14 @@ namespace clang {
                 handle_chunk(clang_getCompletionChunkKind(res->Results[i].CompletionString, k), k);
             }
 
-            // fill type and append to result set
+            // fill additional info and append to result set
+            r.brief = cx2std(clang_getCompletionBriefComment(res->Results[i].CompletionString));
+            r.priority = clang_getCompletionPriority(res->Results[i].CompletionString);
             r.type = cursor2completion(res->Results[i].CursorKind);
+
+            // @todo: once clang forwards the CXCursor of a completion result, we should get
+            //        the full documentation for each entry
+
             ret.push_back(r);
         }
 

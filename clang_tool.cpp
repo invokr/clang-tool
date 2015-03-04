@@ -94,6 +94,16 @@ namespace clang {
         return {};
     }
 
+    ast_element tool::tu_ast(const char* path) {
+        std::lock_guard<std::mutex> l(mMutex);
+
+        auto it = mCache.find(path);
+        if (it != mCache.end())
+            return it->second->ast();
+
+        return {};
+    }
+
     std::vector<diagnostic> tool::tu_diagnose(const char* path) {
         std::lock_guard<std::mutex> l(mMutex);
 
