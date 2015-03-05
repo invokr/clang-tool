@@ -33,6 +33,10 @@
 #include "clang_completion_result.hpp"
 
 namespace clang {
+    /// forward decl for friend
+    class translation_unit;
+    CXChildVisitResult visitor_ast(CXCursor cursor, CXCursor parent, CXClientData client_data);
+
     /** Access specifier */
     enum ast_access {
         invalid_t = 0,
@@ -43,6 +47,18 @@ namespace clang {
 
     /** A single ast element */
     struct ast_element {
+    public:
+        // make sure tu and the visitor have access to top and name
+        friend translation_unit;
+        friend CXChildVisitResult visitor_ast(CXCursor cursor, CXCursor parent, CXClientData client_data);
+
+        /** Constructor */
+        ast_element() : name(""), type(""), cursor(completion_type::unkown_t), loc{"", 0, 0},
+            access(invalid_t), doc("") {}
+
+        /** Destructor */
+        ~ast_element() = default;
+
         /// Token name
         std::string name;
         /// Token type
@@ -58,9 +74,8 @@ namespace clang {
         /// Children
         std::vector<ast_element> children;
 
-        // <- Consider private ->
-
-        /// Top element
+    protected:
+        /// Top element, indirection for top->top_name
         ast_element* top;
         /// Top name
         std::string top_name;
