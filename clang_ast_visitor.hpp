@@ -69,6 +69,7 @@ namespace clang {
         // only work on useful ast symbols
         switch (kind) {
             case CXCursor_EnumDecl:
+            case CXCursor_EnumConstantDecl:
             case CXCursor_InclusionDirective:
             case CXCursor_ClassTemplate:
             case CXCursor_ClassDecl:
