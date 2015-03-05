@@ -46,7 +46,7 @@ int main() {
 
     // 4 - Lets do a code completion
     //     This will complete at [mCache.]
-    auto completion = tool.cursor_complete("clang_tool.hpp", 64, 30);
+    auto completion = tool.cursor_complete("clang_tool.hpp", 2, 14);
     std::cout << std::endl << "Code Completion:" << std::endl;
     std::cout << "================" << std::endl;
 
@@ -58,36 +58,7 @@ int main() {
             << ")" << std::endl;
     }
 
-    // 5 - You can also generates the outline of a tu.
-    //     The outline includes "Includes", "Functions" and "Classes" defined.
-    auto outline = tool.tu_outline("clang_tool.hpp");
-    std::cout << std::endl << "Outline:" << std::endl;
-    std::cout << "========" << std::endl;
-
-    // Iterates over all includes
-    for (auto &include: outline.includes) {
-        std::cout << "[include] " << include << std::endl;
-    }
-
-    // Iterates over all classes
-    for (auto &class_: outline.classes) {
-        std::cout << "[class] " << class_.name << std::endl;
-
-        for (auto &function : class_.functions) {
-            std::cout << " -> [f] ";
-            std::cout << function.name << " (";
-            std::cout << clang::join(function.params.begin(), function.params.end(), ',');
-            std::cout << ")" << std::endl;
-        }
-
-        for (auto &attribute : class_.attributes) {
-            std::cout << " -> [a] " << attribute << std::endl;
-        }
-    }
-
-    // Iterates over all functions
-    for (auto &function: outline.functions) {
-        std::cout << " [function] " << function.name;
-        std::cout << clang::join(function.params.begin(), function.params.end(), ',') << std::endl;
-    }
+    // 5 - Last but not least, let's dump the AST of a translation unit
+    auto ast = tool.tu_ast("clang_tool.hpp");
+    clang::print_ast(&ast);
 }
