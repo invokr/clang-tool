@@ -33,7 +33,6 @@
 #include "noncopyable.hpp"
 #include "util.hpp"
 
-#include "clang_outline.hpp"
 #include "clang_ast.hpp"
 #include "clang_completion_result.hpp"
 
@@ -116,9 +115,6 @@ namespace clang {
             clang_reparseTranslationUnit(mUnit, 1, mCxUnsaved, parsing_options());
         }
 
-        /** Generates tu outline */
-        outline outline();
-        
         /** Returns ast of this unit */
         ast_element ast();
 

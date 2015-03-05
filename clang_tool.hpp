@@ -35,7 +35,6 @@
 #include "clang_ressource_usage.hpp"
 #include "clang_completion_result.hpp"
 #include "clang_location.hpp"
-#include "clang_outline.hpp"
 #include "clang_diagnostic.hpp"
 #include "clang_ast.hpp"
 
@@ -105,9 +104,6 @@ namespace clang {
 
         /** Returns a unique has representing the current index */
         std::string index_hash();
-
-        /** Generates the outline of a translation unit */
-        outline tu_outline(const char* path);
 
         /** Generates ast of given translation unit */
         ast_element tu_ast(const char* path);

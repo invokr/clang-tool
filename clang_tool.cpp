@@ -84,16 +84,6 @@ namespace clang {
         return hash;
     }
 
-    outline tool::tu_outline(const char* path) {
-        std::lock_guard<std::mutex> l(mMutex);
-
-        auto it = mCache.find(path);
-        if (it != mCache.end())
-            return it->second->outline();
-
-        return {};
-    }
-
     ast_element tool::tu_ast(const char* path) {
         std::lock_guard<std::mutex> l(mMutex);
 

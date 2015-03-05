@@ -24,24 +24,9 @@
 #include "clang_location.hpp"
 #include "clang_translation_unit.hpp"
 
-#include "clang_visitor_outline.hpp"
 #include "clang_ast_visitor.hpp"
 
 namespace clang {
-    outline translation_unit::outline() {
-        // Prepare structure
-        struct outline out;
-        visitor_outline_data data;
-        data.out = &out;
-        data.filename = mName;
-        data.t_state = 0;
-
-        CXCursor rootCursor = clang_getTranslationUnitCursor(mUnit);
-        clang_visitChildren(rootCursor, *visitor_outline_fcn, &data);
-
-        return out;
-    }
-
     ast_element translation_unit::ast() {
         // Prepare structure
         ast_element e;
