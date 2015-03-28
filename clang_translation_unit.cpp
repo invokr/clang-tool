@@ -146,7 +146,7 @@ namespace clang {
         CXCursor cursor = get_cursor_at(row, col);
 
         if (clang_Cursor_isNull(cursor) || clang_isInvalid(clang_getCursorKind(cursor)))
-            return {};
+            return "";
 
         CXType type = clang_getCursorType(cursor);
         CXType real_type = clang_getCanonicalType( type );
@@ -166,7 +166,7 @@ namespace clang {
         CXCursor ref = clang_getCursorReferenced( cursor );
 
         if (clang_Cursor_isNull(ref) || clang_isInvalid(clang_getCursorKind(ref)))
-            return {};
+            return {"", 0, 0};
 
         CXSourceLocation loc = clang_getCursorLocation(ref);
 
@@ -182,7 +182,7 @@ namespace clang {
         CXCursor ref = clang_getCursorDefinition( cursor );
 
         if (clang_Cursor_isNull(ref) || clang_isInvalid(clang_getCursorKind(ref)))
-            return {};
+            return {"", 0, 0};
 
         CXSourceLocation loc = clang_getCursorLocation(ref);
 

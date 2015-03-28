@@ -131,7 +131,7 @@ namespace clang {
         if (it != mCache.end())
             return it->second->declaration_location_at(row, col);
 
-        return {};
+        return {"", 0, 0};
     }
 
     location tool::cursor_definition(const char* path, uint32_t row, uint32_t col) {
@@ -141,6 +141,6 @@ namespace clang {
         if (it != mCache.end())
             return it->second->definition_location_at(row, col);
 
-        return {};
+        return {"", 0, 0};
     }
 }

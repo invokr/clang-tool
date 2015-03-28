@@ -28,6 +28,7 @@
 #include <mutex>
 #include <thread>
 
+#include <cstring>
 #include <clang-c/Index.h>
 
 #include "noncopyable.hpp"
