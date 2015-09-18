@@ -53,7 +53,7 @@ namespace clang {
         friend CXChildVisitResult visitor_ast(CXCursor cursor, CXCursor parent, CXClientData client_data);
 
         /** Constructor */
-        ast_element() : name(""), type(""), cursor(completion_type::unkown_t), loc{"", 0, 0},
+        ast_element() : name(""), type(""), typedefType(""), cursor(completion_type::unkown_t), loc{"", 0, 0},
             access(invalid_t), doc("") {}
 
         /** Destructor */
@@ -63,6 +63,8 @@ namespace clang {
         std::string name;
         /// Token type
         std::string type;
+        /// Token typedef
+        std::string typedefType;
         /// Cursor type
         completion_type cursor;
         /// Location

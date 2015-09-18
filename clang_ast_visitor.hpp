@@ -80,12 +80,14 @@ namespace clang {
             case CXCursor_FieldDecl:
             case CXCursor_FunctionTemplate:
             case CXCursor_FunctionDecl:
-            case CXCursor_ParmDecl: {
+            case CXCursor_ParmDecl:
+            case CXCursor_TypedefDecl: {
                 child.name = cx2std(name);
                 child.loc.file = cx2std(filename);
                 child.loc.col = col;
                 child.loc.row = row;
                 child.type = cx2std(clang_getTypeSpelling(clang_getCursorType(cursor)));
+                child.typedefType = cx2std(clang_getTypeSpelling(clang_getTypedefDeclUnderlyingType(cursor)));
                 child.cursor = cursor2completion(kind);
                 child.top = elem->top;
 
