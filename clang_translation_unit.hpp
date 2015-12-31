@@ -27,6 +27,7 @@
 #include <cstddef>
 #include <cassert>
 #include <clang-c/Index.h>
+#include <clang-c/Documentation.h>
 #include <iostream>
 
 #include "sha1.hpp"
